@@ -41,13 +41,13 @@ def generuj_pomysly(temat: str, liczba: int) -> list:
 def generuj_kolorowanke(opis: str) -> Image.Image:
     """Generuje kolorowankę na podstawie opisu."""
     prompt = f"simple black and white line art coloring page for kids: {opis}"
-    result = client.images.generate(
+    result = openai.images.generate(
         model="gpt-image-1",
         prompt=prompt,
         size="1024x1024"
     )
     image_url = result.data[0].url
-    image = Image.open(io.BytesIO(client.images.retrieve_content(image_url)))
+    image = Image.open(io.BytesIO(openai.images.retrieve_content(image_url)))
     return image
 
 
@@ -112,7 +112,7 @@ try:
             for opis in st.session_state.pomysly:
                 with st.spinner(f"Generuję kolorowankę: {opis}..."):
                     try:
-                        obraz = client.images.generate(
+                        obraz = openai.images.generate(
                             model="gpt-image-1",
                             prompt=f"black and white outline coloring page for kids, {opis}",
                             size="1024x1024"
