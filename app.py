@@ -1,6 +1,7 @@
 import os
 import io
 import json
+import requests
 import streamlit as st
 import openai
 from PIL import Image
@@ -8,6 +9,7 @@ from PIL import Image
 # ──────────────────────────────────────────────────────────────
 # KONFIGURACJA APLIKACJI
 # ──────────────────────────────────────────────────────────────
+st.set_option("server.fileWatcherType", "none")  # zapobiega błędowi inotify
 st.set_page_config(page_title="🎨 Generator kolorowanek", page_icon="🖍️", layout="centered")
 st.title("🎨 Generator kolorowanek dla dzieci")
 st.caption("Podaj temat przewodni i wygeneruj kolorowanki w formacie PNG do druku.")
@@ -19,12 +21,14 @@ if not OPENAI_API_KEY:
     st.stop()
 openai.api_key = OPENAI_API_KEY
 
+
 # ──────────────────────────────────────────────────────────────
 # FUNKCJE
 # ──────────────────────────────────────────────────────────────
-
 def generuj_pomysly(temat: str, liczba: int) -> list:
     """Generuje listę pomysłów na kolorowanki w zadanym temacie."""
+    if not temat.strip():
+        return []
     prompt = (
         f"Podaj {liczba} pomysłów na czarno-białe kolorowanki dla dzieci na temat: {temat}. "
         f"Każdy pomysł w formie krótkiego opisu sceny (np. 'kot bawiący się kłębkiem wełny')."
@@ -38,25 +42,12 @@ def generuj_pomysly(temat: str, liczba: int) -> list:
     return [line.strip("-• ") for line in text.split("\n") if line.strip()]
 
 
-def generuj_kolorowanke(opis: str) -> Image.Image:
-    """Generuje kolorowankę na podstawie opisu."""
-    prompt = f"simple black and white line art coloring page for kids: {opis}"
-    result = openai.images.generate(
-        model="gpt-image-1",
-        prompt=prompt,
-        size="1024x1024"
-    )
-    image_url = result.data[0].url
-    image = Image.open(io.BytesIO(openai.images.retrieve_content(image_url)))
-    return image
-
-
 def zapisz_sesje(temat, pomysly):
     """Zapisuje bieżącą sesję jako JSON."""
     data = {"temat": temat, "pomysly": pomysly}
     st.download_button(
         "💾 Pobierz sesję",
-        data=json.dumps(data, ensure_ascii=False),
+        data=json.dumps(data, ensure_ascii=False, indent=2),
         file_name="sesja_kolorowanki.json",
         mime="application/json"
     )
@@ -67,8 +58,8 @@ def wczytaj_sesje():
     uploaded = st.file_uploader("📂 Wczytaj zapisaną sesję (JSON)", type=["json"])
     if uploaded:
         data = json.load(uploaded)
-        st.session_state.temat = data["temat"]
-        st.session_state.pomysly = data["pomysly"]
+        st.session_state.temat = data.get("temat", "")
+        st.session_state.pomysly = data.get("pomysly", [])
         st.success(f"Wczytano sesję: {data['temat']}")
         return True
     return False
@@ -77,7 +68,6 @@ def wczytaj_sesje():
 # ──────────────────────────────────────────────────────────────
 # LOGIKA GŁÓWNA
 # ──────────────────────────────────────────────────────────────
-
 if "pomysly" not in st.session_state:
     st.session_state.pomysly = []
 if "temat" not in st.session_state:
@@ -95,7 +85,10 @@ try:
         if st.button("✨ Generuj pomysły"):
             st.session_state.pomysly = generuj_pomysly(temat, liczba)
             st.session_state.temat = temat
-            st.success("Wygenerowano pomysły!")
+            if st.session_state.pomysly:
+                st.success("Wygenerowano pomysły!")
+            else:
+                st.warning("Podaj temat, aby wygenerować pomysły.")
 
     with col2:
         if st.button("📂 Wczytaj poprzednią sesję"):
@@ -114,14 +107,15 @@ try:
                     try:
                         obraz = openai.images.generate(
                             model="gpt-image-1",
-                            prompt=f"black and white outline coloring page for kids, {opis}",
+                            prompt=f"black and white outline coloring page for kids, no shading, printable, {opis}",
                             size="1024x1024"
                         )
                         img_url = obraz.data[0].url
+                        img_data = requests.get(img_url).content
                         st.image(img_url, caption=opis)
                         st.download_button(
                             label="⬇️ Pobierz kolorowankę",
-                            data=requests.get(img_url).content,
+                            data=img_data,
                             file_name=f"{opis}.png",
                             mime="image/png",
                         )
@@ -129,4 +123,4 @@ try:
                         st.error(f"Błąd podczas generowania: {e}")
 
 except Exception as e:
-    st.error(f"❌ Błąd: {e}")
+    st.error(f"❌ Błąd aplikacji: {e}")
