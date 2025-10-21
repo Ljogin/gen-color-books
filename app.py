@@ -9,7 +9,6 @@ from PIL import Image
 # ──────────────────────────────────────────────────────────────
 # KONFIGURACJA APLIKACJI
 # ──────────────────────────────────────────────────────────────
-st.set_option("server.fileWatcherType", "none")  # zapobiega błędowi inotify
 st.set_page_config(page_title="🎨 Generator kolorowanek", page_icon="🖍️", layout="centered")
 st.title("🎨 Generator kolorowanek dla dzieci")
 st.caption("Podaj temat przewodni i wygeneruj kolorowanki w formacie PNG do druku.")
