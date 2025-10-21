@@ -2,7 +2,7 @@ import os
 import io
 import json
 import streamlit as st
-from openai import OpenAI
+import openai
 from PIL import Image
 
 # ──────────────────────────────────────────────────────────────
@@ -17,7 +17,7 @@ OPENAI_API_KEY = st.secrets.get("OPENAI_API_KEY")
 if not OPENAI_API_KEY:
     st.error("Brak klucza OPENAI_API_KEY w sekcji Secrets.")
     st.stop()
-client = OpenAI(api_key=OPENAI_API_KEY)
+openai.api_key = OPENAI_API_KEY
 
 # ──────────────────────────────────────────────────────────────
 # FUNKCJE
@@ -29,7 +29,7 @@ def generuj_pomysly(temat: str, liczba: int) -> list:
         f"Podaj {liczba} pomysłów na czarno-białe kolorowanki dla dzieci na temat: {temat}. "
         f"Każdy pomysł w formie krótkiego opisu sceny (np. 'kot bawiący się kłębkiem wełny')."
     )
-    response = client.chat.completions.create(
+    response = openai.chat.completions.create(
         model="gpt-4o-mini",
         messages=[{"role": "user", "content": prompt}],
         temperature=0.8,
